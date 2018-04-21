@@ -1,0 +1,7 @@
+.vscode
+*.o
+*.so
+*.a
+*DS_Store
+a.out
+tests
