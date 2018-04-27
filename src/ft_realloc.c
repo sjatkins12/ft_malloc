@@ -6,62 +6,60 @@
 /*   By: satkins <satkins@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/16 14:13:58 by satkins           #+#    #+#             */
-/*   Updated: 2018/03/17 15:58:12 by satkins          ###   ########.fr       */
+/*   Updated: 2018/04/26 10:05:47 by satkins          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ft_malloc.h"
 
-static int	is_space(t_meta *met_head, size_t size)
+static int			is_space(t_meta *iter_head, size_t size)
 {
-	t_meta	*met_iter;
-	size_t	curr_len;
+	size_t	space;
 
-	curr_len = met_head->len;
-	met_iter = (void *)met_head + sizeof(t_meta) + met_head->len;
-	while ((void *)met_iter < met_head->start + get_page_size(met_head->p_index) - sizeof(t_meta))
+	pthread_rwlock_wrlock(&(g_rwlock[iter_head->p_index]));
+	if ((space = check_contiguous(iter_head, size, iter_head->p_index)))
 	{
-		if (!met_iter->len)
-		{
-			if (size + met_head->mem_seg < met_head->start + get_page_size(met_head->p_index) - sizeof(t_meta))
-			{
-				met_head->next_page = met_iter->next_page;
-				met_head->len = size;
-				return (1);
-			}
-			return (0);
-		}
-		if (met_iter->used)
-			return (0);
-		curr_len += met_iter->len + sizeof(t_meta);
-		if (size <= curr_len)
-		{
-			met_head->next_page = met_iter->next_page;
-			met_head->len = curr_len;
-			return (1);
-		}
-		met_iter = (void *)met_iter + met_iter->len + sizeof(t_meta);
+		if (iter_head->next_page)
+			N_HEAD = iter_head->next_page;
+		iter_head->next_page = NULL;
+		set_meta(iter_head, space, iter_head->p_index);
+		pthread_rwlock_unlock(&(g_rwlock[iter_head->p_index]));
+		return (1);
 	}
+	pthread_rwlock_unlock(&(g_rwlock[iter_head->p_index]));
 	return (0);
 }
 
-void		*realloc(void *ptr, size_t size)
+static size_t		seg_sizes(int p_size)
+{
+	if (p_size == SMALL_IND)
+		return (SMALL);
+	else if (p_size == TINY_IND)
+		return (TINY);
+	else if (p_size == LARGE_IND)
+		return (0);
+	return (0);
+}
+
+void				*realloc(void *ptr, size_t size)
 {
 	t_meta	*met_head;
 	void	*tmp;
 
-	if (!ptr)
+	if (!validate_addr(ptr))
 		return (malloc(size));
 	met_head = ptr - sizeof(t_meta);
 	if (!validate_csum(met_head))
 		return (NULL);
 	if (size <= met_head->len)
 		return (ptr);
-	else if (met_head->p_index != LARGE_IND && is_space(met_head, size))
+	else if (size && seg_sizes(met_head->p_index) >= size &&
+		is_space(met_head, size))
 		return (ptr);
 	if (!(tmp = malloc(size)))
 		return (NULL);
-	ft_memcpy(tmp, ptr, met_head->len);
+	if (!ft_memcpy(tmp, ptr, met_head->len))
+		return (NULL);
 	free(ptr);
-	return (tmp);	
+	return (tmp);
 }

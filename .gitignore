@@ -5,3 +5,6 @@
 *DS_Store
 a.out
 tests
+tmp
+*.sh
+._*

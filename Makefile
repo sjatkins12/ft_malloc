@@ -6,7 +6,7 @@
 #    By: satkins <satkins@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/07/25 14:05:53 by satkins           #+#    #+#              #
-#    Updated: 2018/04/21 12:11:18 by satkins          ###   ########.fr        #
+#    Updated: 2018/04/27 10:19:53 by satkins          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -34,11 +34,11 @@ CC = gcc
 
 FLAGS = -Wall -Wextra -Werror
 
-TFLAGS = -Wall -Wextra -Werror -g -fsanatize=address
+TFLAGS = -Wall -Wextra -Werror
 
 CFLAGS = -Wall -Wextra -Werror -c -fPIC
 
-LFLAGS = -g -shared
+LFLAGS = -shared -ldl
 
 TARG = $(patsubst %, obj/%.o, $(SRCS))
 
@@ -49,7 +49,13 @@ TARG = $(patsubst %, obj/%.o, $(SRCS))
 SRC_MALLOC =  \
 		ft_malloc \
 		ft_realloc \
-		free
+		free \
+		iter_pages \
+		check_for_room \
+		show_alloc_mem \
+		check_sum \
+		background_cleaner \
+		debug
 
 ################################################################################
 # Source directories identifiers                                               #
@@ -86,8 +92,8 @@ all: $(NAME)
 $(NAME): $(LIBFT) $(OBJSRC)
 	@ echo "$(YELLOW)Compiling program$(RES)"
 	@$(CC) $(LFLAGS) -L $(LIBPATH) -lftprintf $(INCLUDES) $(OBJSRC) -o $(NAME)
-	@rm -f libft_malloc.so
-	@ln -s $@ libft_malloc.so
+	rm -f libft_malloc.so
+	ln -s $@ libft_malloc.so
 	@echo "$(GREEN)Shared Lib Compiled$(RES)"
 
 
@@ -97,6 +103,9 @@ $(LIBFT):
 %.o: %.c
 	@ echo "$(YELLOW)Compiling $<...$(RES)"
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+debug: CFLAGS += -g -DDEBUG
+debug: clean $(NAME)
 
 clean:
 	rm -f $(OBJSRC)
@@ -111,6 +120,3 @@ fclean: clean
 
 re: fclean all
 	@ echo "$(GREEN)Shared Lib Remade$(RES)"
-
-#debug: re
-#	@$(CC) $(TFLAGS) -I$(HEADER) -I$(LIBHEADER) -o $(NAME) $(SRCS) -L$(LIBPATH) -l$(LIBNAME) $(LIB_LINK)
